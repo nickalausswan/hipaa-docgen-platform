@@ -44,7 +44,7 @@ if st.button("🚀 Generate All"):
 
         # Build prompt
         prompt = f"""
-        You are an AI assistant for hospital documentation and clinical communication.
+        You are an AI assistant for hospital documentation and consult communication.
 
         Task 1: Generate a professional {note_type} note:
         - Patient Name: {patient_name}
@@ -77,7 +77,7 @@ if st.button("🚀 Generate All"):
                 # Display all content
                 st.markdown(output)
 
-                # Optional: Extract consult message
+                # Display consult message if included
                 if include_consult and "Hello, may I please consult you on" in output:
                     consult_start = output.find("Hello, may I please consult you on")
                     consult_text = output[consult_start:]

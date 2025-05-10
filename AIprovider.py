@@ -43,21 +43,35 @@ if st.button("🚀 Generate All"):
     else:
         client = OpenAI(api_key=api_key)
 
-        # Dynamic note instructions
-        if note_type in ["H&P (SOAP)", "Progress Note (SOAP)"]:
-            note_instruction = f"Generate a detailed professional {note_type} using SOAP format. Include a combined problem-oriented Assessment and Plan for each issue."
-        else:
-            note_instruction = "Generate a detailed professional Discharge Summary appropriate for inpatient medical documentation."
+        # Dynamic instructions for note type
+        if note_type == "H&P (SOAP)":
+            note_instruction = (
+                "Generate a detailed professional History & Physical (SOAP format). "
+                "Include:\n- Subjective section with appropriate Review of Systems (ROS),\n"
+                "- Objective section with a relevant physical exam,\n"
+                "- A combined problem-oriented Assessment and Plan for each issue."
+            )
+        elif note_type == "Progress Note (SOAP)":
+            note_instruction = (
+                "Generate a detailed professional Progress Note (SOAP format). "
+                "Include:\n- Objective section with a relevant physical exam,\n"
+                "- A combined problem-oriented Assessment and Plan for each problem addressed."
+            )
+        else:  # Discharge Summary
+            note_instruction = (
+                "Generate a detailed professional Discharge Summary appropriate for inpatient documentation. "
+                "Include an appropriate physical exam from the day of discharge."
+            )
 
         # Full prompt
         prompt = f"""
         You are a hospitalist documentation and triage AI assistant.
 
-        Step 1: From the clinical summary, extract the patient's name (if mentioned) and the most likely admitting diagnosis or chief complaint.
+        Step 1: From the clinical summary, extract the patient's name (if present) and most likely admitting diagnosis or chief complaint.
 
         Step 2: {note_instruction}
 
-        Step 3: Evaluate if the patient qualifies for Inpatient or Observation status using InterQual-style logic. Provide a brief justification.
+        Step 3: Determine if the patient qualifies for Inpatient or Observation status using InterQual-style logic. Provide a brief justification.
 
         {"Step 4: Extract the patient's most recent creatinine from the clinical summary. If creatinine > 2.0, recommend Heparin. Otherwise, recommend Lovenox." if include_dvt else ""}
 
@@ -66,7 +80,7 @@ if st.button("🚀 Generate All"):
         Clinical Summary:
         {clinical_data}
 
-        Use these headers:
+        Format the output using the following headers:
         ### Generated Note
         ### Status Recommendation
         ### DVT Prophylaxis Recommendation (if applicable)

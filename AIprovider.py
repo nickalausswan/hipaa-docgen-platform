@@ -6,7 +6,6 @@ st.set_page_config(page_title="HIPAA DocGen Platform", layout="wide")
 # Sidebar Configuration
 st.sidebar.title("🔧 Configuration")
 api_key = st.sidebar.text_input("OpenAI API Key", type="password")
-model_choice = st.sidebar.selectbox("OpenAI Model", ["gpt-4", "gpt-3.5-turbo"])
 
 # Page Title
 st.title("🏥 HIPAA-Compliant Documentation Generator")
@@ -27,9 +26,9 @@ st.header("🦵 Step 3: DVT Prophylaxis")
 include_dvt = st.checkbox("Recommend DVT prophylaxis based on renal function")
 creatinine_value = st.number_input("Patient Creatinine (mg/dL)", min_value=0.1, max_value=15.0, step=0.1)
 
-# Step 4: Automatic Consult Detection
-st.header("📞 Step 4: Auto-Detect Necessary Consults")
-include_consult = st.checkbox("Detect and generate consult messages automatically")
+# Step 4: Auto Consult Detection
+st.header("📞 Step 4: Auto-Detect Consults")
+include_consult = st.checkbox("Automatically detect needed consults and generate messages")
 
 # Submit Button
 if st.button("🚀 Generate All"):
@@ -40,34 +39,34 @@ if st.button("🚀 Generate All"):
     else:
         client = OpenAI(api_key=api_key)
 
-        # Construct prompt
+        # Prompt construction
         prompt = f"""
-        You are an AI assistant for hospital documentation and triage.
+        You are a clinical documentation and triage AI.
 
-        Step 1: From the clinical text below, extract the patient's name (if mentioned) and the most likely admitting diagnosis or chief complaint.
+        Step 1: From the clinical summary, extract the patient name (if present) and likely admitting diagnosis or chief complaint.
 
-        Step 2: Generate a professional medical note (default to H&P unless clinical context suggests otherwise).
+        Step 2: Generate a professional medical note (use H&P format unless context indicates otherwise).
 
-        Step 3: Evaluate if the patient meets criteria for Inpatient or Observation status based on InterQual-style reasoning. Provide a brief justification.
+        Step 3: Determine if the case qualifies for Inpatient or Observation status using InterQual-style criteria and explain.
 
-        {"Step 4: Recommend DVT prophylaxis. Use Heparin if creatinine > 2.0, otherwise Lovenox.\nCreatinine: " + str(creatinine_value) + " mg/dL" if include_dvt else ""}
+        {"Step 4: Recommend DVT prophylaxis. Use Heparin if creatinine > 2.0, otherwise Lovenox. Creatinine: " + str(creatinine_value) + " mg/dL" if include_dvt else ""}
 
-        {"Step 5: Based on the clinical scenario, identify all relevant medical or surgical specialties that should be consulted. For each, generate a brief consult request text message beginning with 'Hello, may I please consult you on...' Use a professional tone suitable for secure messaging." if include_consult else ""}
+        {"Step 5: Identify all relevant specialties that should be consulted. For each, generate a professional consult message that begins with: 'Hello, may I please consult you on...'" if include_consult else ""}
 
         Clinical Summary:
         {clinical_data}
 
-        Please format the output using clear section headers:
-        - Generated Note
-        - Status Recommendation
-        - DVT Prophylaxis Recommendation (if applicable)
-        - Consult Messages (if applicable)
+        Please format the output with clear section headers like:
+        ### Generated Note
+        ### Status Recommendation
+        ### DVT Prophylaxis Recommendation (if applicable)
+        ### Consult Messages (if applicable)
         """
 
         try:
             with st.spinner("⏳ Generating output..."):
                 response = client.chat.completions.create(
-                    model=model_choice,
+                    model="gpt-4",
                     messages=[
                         {"role": "system", "content": "You are a hospitalist documentation and triage assistant."},
                         {"role": "user", "content": prompt}
@@ -77,7 +76,7 @@ if st.button("🚀 Generate All"):
                 output = response.choices[0].message.content
                 st.success("✅ Output Generated")
 
-                # --- Show main output ---
+                # Parse and display sections
                 sections = output.split("###")
                 for section in sections:
                     section = section.strip()
@@ -92,7 +91,7 @@ if st.button("🚀 Generate All"):
                     elif section:
                         st.markdown(f"### {section}")
 
-                # --- Download full output ---
+                # Download output
                 st.download_button(
                     label="📥 Download Note as .txt",
                     data=output,

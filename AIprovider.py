@@ -11,16 +11,16 @@ model_choice = st.sidebar.selectbox("OpenAI Model", ["gpt-4", "gpt-3.5-turbo"])
 # Page Title
 st.title("🏥 HIPAA-Compliant Documentation Generator")
 
-# Step 1: Note Generation
-st.header("📄 Step 1: Generate Medical Note")
-note_type = st.selectbox("Note Type", ["H&P", "Progress Note", "Discharge Summary"])
-patient_name = st.text_input("Patient Name")
-admitting_diagnosis = st.text_input("Admitting Diagnosis / Chief Complaint")
-clinical_data = st.text_area("Clinical Summary (labs, vitals, imaging, PMH, ROS, etc.)", height=250)
+# Step 1: Clinical Input Only
+st.header("📄 Step 1: Enter Clinical Summary")
+clinical_data = st.text_area(
+    "Paste clinical summary (labs, imaging, vitals, HPI, PMH, etc.):", 
+    height=300
+)
 
 # Step 2: Status Recommendation
 st.header("🧠 Step 2: Inpatient vs. Observation Evaluation")
-include_status_eval = st.checkbox("Evaluate status (InterQual-guided logic)")
+include_status_eval = st.checkbox("Evaluate status using InterQual-guided logic")
 
 # Step 3: DVT Prophylaxis Recommendation
 st.header("🦵 Step 3: DVT Prophylaxis")
@@ -37,58 +37,56 @@ consult_reason = st.text_area("Reason for Consult", height=100)
 if st.button("🚀 Generate All"):
     if not api_key:
         st.warning("⚠️ Please enter your OpenAI API Key.")
-    elif not clinical_data or not admitting_diagnosis:
-        st.warning("⚠️ Please fill in required clinical fields.")
+    elif not clinical_data:
+        st.warning("⚠️ Please enter the clinical summary.")
     else:
         client = OpenAI(api_key=api_key)
 
-        # Build prompt
+        # Construct prompt
         prompt = f"""
-        You are an AI assistant for hospital documentation and consult communication.
+        You are an AI hospital documentation assistant.
 
-        Task 1: Generate a professional {note_type} note:
-        - Patient Name: {patient_name}
-        - Admitting Diagnosis: {admitting_diagnosis}
-        - Clinical Summary: {clinical_data}
+        Step 1: From the following clinical data, extract the patient's name (if present) and chief complaint or admitting diagnosis.
 
-        Task 2: Determine if the patient meets criteria for Inpatient or Observation status based on InterQual logic.
-        Provide a clinical justification.
+        Step 2: Use that information to generate a professional medical note (default to H&P style unless clinical context suggests otherwise).
 
-        {"Task 3: Recommend DVT prophylaxis. Use Heparin if creatinine > 2.0, otherwise Lovenox.\nCreatinine: " + str(creatinine_value) + " mg/dL" if include_dvt else ""}
+        Step 3: Based on InterQual criteria, determine if the patient qualifies for Inpatient or Observation status and explain briefly.
 
-        {"Task 4: Generate a consult request message to the " + consult_service + " service.\nStart with 'Hello, may I please consult you on...'\nReason for Consult: " + consult_reason if include_consult else ""}
+        {"Step 4: Recommend DVT prophylaxis. Use Heparin if creatinine > 2.0, otherwise Lovenox.\nCreatinine: " + str(creatinine_value) + " mg/dL" if include_dvt else ""}
 
-        Format response clearly with headers for each section.
+        {"Step 5: Generate a consult request message to the " + consult_service + " service. Start with 'Hello, may I please consult you on...' using the consult reason: " + consult_reason if include_consult else ""}
+
+        Clinical Summary:
+        {clinical_data}
+
+        Please format the output with clear section headers.
         """
 
         try:
-            with st.spinner("⏳ Generating output..."):
+            with st.spinner("⏳ Generating..."):
                 response = client.chat.completions.create(
                     model=model_choice,
                     messages=[
-                        {"role": "system", "content": "You are a professional hospitalist and documentation expert."},
+                        {"role": "system", "content": "You are a hospitalist documentation and triage assistant."},
                         {"role": "user", "content": prompt}
                     ],
                     temperature=0.6,
                 )
                 output = response.choices[0].message.content
-                st.success("✅ Generated successfully!")
-
-                # Display all content
+                st.success("✅ Output Generated")
                 st.markdown(output)
 
                 # Display consult message if included
                 if include_consult and "Hello, may I please consult you on" in output:
-                    consult_start = output.find("Hello, may I please consult you on")
-                    consult_text = output[consult_start:]
+                    start = output.find("Hello, may I please consult you on")
                     st.markdown("### 📞 Consult Message")
-                    st.code(consult_text.strip(), language="text")
+                    st.code(output[start:], language="text")
 
-                # Download note
+                # Download output
                 st.download_button(
                     label="📥 Download Note as .txt",
                     data=output,
-                    file_name=f"{patient_name.replace(' ', '_')}_{note_type.replace(' ', '_')}.txt",
+                    file_name="generated_note.txt",
                     mime="text/plain"
                 )
 

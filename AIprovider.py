@@ -27,11 +27,9 @@ st.header("🦵 Step 3: DVT Prophylaxis")
 include_dvt = st.checkbox("Recommend DVT prophylaxis based on renal function")
 creatinine_value = st.number_input("Patient Creatinine (mg/dL)", min_value=0.1, max_value=15.0, step=0.1)
 
-# Step 4: Consult Request Generator
-st.header("📞 Step 4: Consult Text Message")
-include_consult = st.checkbox("Generate consult request message")
-consult_service = st.text_input("Consulting Service (e.g., Cardiology, GI, ID)")
-consult_reason = st.text_area("Reason for Consult", height=100)
+# Step 4: Automatic Consult Detection
+st.header("📞 Step 4: Auto-Detect Necessary Consults")
+include_consult = st.checkbox("Detect and generate consult messages automatically")
 
 # Submit Button
 if st.button("🚀 Generate All"):
@@ -44,26 +42,30 @@ if st.button("🚀 Generate All"):
 
         # Construct prompt
         prompt = f"""
-        You are an AI hospital documentation assistant.
+        You are an AI assistant for hospital documentation and triage.
 
-        Step 1: From the following clinical data, extract the patient's name (if present) and chief complaint or admitting diagnosis.
+        Step 1: From the clinical text below, extract the patient's name (if mentioned) and the most likely admitting diagnosis or chief complaint.
 
-        Step 2: Use that information to generate a professional medical note (default to H&P style unless clinical context suggests otherwise).
+        Step 2: Generate a professional medical note (default to H&P unless clinical context suggests otherwise).
 
-        Step 3: Based on InterQual criteria, determine if the patient qualifies for Inpatient or Observation status and explain briefly.
+        Step 3: Evaluate if the patient meets criteria for Inpatient or Observation status based on InterQual-style reasoning. Provide a brief justification.
 
         {"Step 4: Recommend DVT prophylaxis. Use Heparin if creatinine > 2.0, otherwise Lovenox.\nCreatinine: " + str(creatinine_value) + " mg/dL" if include_dvt else ""}
 
-        {"Step 5: Generate a consult request message to the " + consult_service + " service. Start with 'Hello, may I please consult you on...' using the consult reason: " + consult_reason if include_consult else ""}
+        {"Step 5: Based on the clinical scenario, identify all relevant medical or surgical specialties that should be consulted. For each, generate a brief consult request text message beginning with 'Hello, may I please consult you on...' Use a professional tone suitable for secure messaging." if include_consult else ""}
 
         Clinical Summary:
         {clinical_data}
 
-        Please format the output with clear section headers.
+        Please format the output using clear section headers:
+        - Generated Note
+        - Status Recommendation
+        - DVT Prophylaxis Recommendation (if applicable)
+        - Consult Messages (if applicable)
         """
 
         try:
-            with st.spinner("⏳ Generating..."):
+            with st.spinner("⏳ Generating output..."):
                 response = client.chat.completions.create(
                     model=model_choice,
                     messages=[
@@ -74,15 +76,23 @@ if st.button("🚀 Generate All"):
                 )
                 output = response.choices[0].message.content
                 st.success("✅ Output Generated")
-                st.markdown(output)
 
-                # Display consult message if included
-                if include_consult and "Hello, may I please consult you on" in output:
-                    start = output.find("Hello, may I please consult you on")
-                    st.markdown("### 📞 Consult Message")
-                    st.code(output[start:], language="text")
+                # --- Show main output ---
+                sections = output.split("###")
+                for section in sections:
+                    section = section.strip()
+                    if section.lower().startswith("consult messages") and include_consult:
+                        st.markdown("### 📞 Consult Messages (Detected)")
+                        consults = section.split("**")
+                        for i in range(1, len(consults), 2):
+                            specialty = consults[i].strip(": ")
+                            message = consults[i+1].strip()
+                            with st.expander(f"{specialty}"):
+                                st.code(message, language="text")
+                    elif section:
+                        st.markdown(f"### {section}")
 
-                # Download output
+                # --- Download full output ---
                 st.download_button(
                     label="📥 Download Note as .txt",
                     data=output,

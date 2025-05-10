@@ -22,11 +22,11 @@ clinical_data = st.text_area(
     height=300
 )
 
-# Step 2: Status Recommendation
+# Step 2: InterQual Status Evaluation
 st.header("🧠 Step 2: Inpatient vs. Observation Evaluation")
 include_status_eval = st.checkbox("Evaluate status using InterQual-guided logic")
 
-# Step 3: Auto DVT Prophylaxis Recommendation
+# Step 3: DVT Prophylaxis
 st.header("🦵 Step 3: DVT Prophylaxis")
 include_dvt = st.checkbox("Automatically detect creatinine and recommend prophylaxis")
 
@@ -43,27 +43,78 @@ if st.button("🚀 Generate All"):
     else:
         client = OpenAI(api_key=api_key)
 
-        # Dynamic instructions for note type
+        # Note-specific prompt instructions
         if note_type == "H&P (SOAP)":
             note_instruction = (
-                "Generate a detailed professional History & Physical (SOAP format). "
-                "Include:\n- Subjective section with appropriate Review of Systems (ROS),\n"
-                "- Objective section with a relevant physical exam,\n"
-                "- A combined problem-oriented Assessment and Plan for each issue."
+                "Generate a Hospitalist History and Physical using the following exact structure:\n\n"
+                "Hospitalist History and Physical Exam\n\n"
+                "Chief Complaint:\n\n"
+                "HPI is provided by:\n\n"
+                "History of Present Illness:\n\n"
+                "Allergies\n\n"
+                "Social History:\n\n"
+                "Family History: reviewed and noncontributory\n\n"
+                "Surgical history:\n\n"
+                "Medical History:\n\n"
+                "Home Medication List:\n\n"
+                "Review of Systems\n\n"
+                "Physical Exam\n\n"
+                "Vitals & Measurements\n"
+                "Weight Measured:\n"
+                "BMI Measured:\n"
+                "Height/Length Measured:\n\n"
+                "Lab Results\n\n"
+                "Diagnostic Results\n\n"
+                "ASSESSMENT and PLAN\n\n"
+                "GI Prophylaxis\n\n"
+                "DVT Prophylaxis\n\n"
+                "Disposition\n\n"
+                "Plan of care discussed and reviewed with Attending Doctor"
             )
         elif note_type == "Progress Note (SOAP)":
             note_instruction = (
-                "Generate a detailed professional Progress Note (SOAP format). "
-                "Include:\n- Objective section with a relevant physical exam,\n"
-                "- A combined problem-oriented Assessment and Plan for each problem addressed."
+                "Generate a Hospitalist Progress Note using the following exact structure:\n\n"
+                "Hospitalist Progress Note\n\n"
+                "SUBJECTIVE:\n"
+                "Patient was seen and examined. Overnight events reviewed. Discussed with nursing.\n\n"
+                "Objective\n\n"
+                "Vitals\n\n"
+                "Physical Exam\n\n"
+                "Current Medications\n\n"
+                "Lab Results\n\n"
+                "I/O\n\n"
+                "Diagnostic Tests\n\n"
+                "ASSESSMENT/PLAN:\n\n"
+                "GI Prophylaxis\n\n"
+                "DVT Prophylaxis\n\n"
+                "Disposition\n\n"
+                "Admission H&P reviewed, labs reviewed, vital signs reviewed, PO and IV medications reviewed, discussed plan of care in interprofessional collaboration meeting with case management, social work and PT/OT.\n"
+                "Plan of care reviewed and discussed with Dr. _"
             )
-        else:  # Discharge Summary
+        else:
             note_instruction = (
-                "Generate a detailed professional Discharge Summary appropriate for inpatient documentation. "
-                "Include an appropriate physical exam from the day of discharge."
+                "Generate a Hospitalist Discharge Summary using the following structure:\n\n"
+                "Hospitalist Discharge Summary\n\n"
+                "Reason for Admission\n\n"
+                "History of Present Illness\n\n"
+                "Hospital Course\n\n"
+                "Procedures Performed\n\n"
+                "Consultants\n\n"
+                "Physical Exam\n\n"
+                "Vital Signs\n\n"
+                "Discharge Plan\n\n"
+                "Discharge Disposition\n\n"
+                "Follow-Up\n\n"
+                "Problem List\n"
+                "Resolved During Admission:\n\n"
+                "Ongoing Medical Problems:\n\n"
+                "Time Spent On Discharge\n"
+                "[_] Less than 30 minutes\n"
+                "[X] Greater than 30 minutes\n\n"
+                "Plan of care discussed and Reviewed with Dr. _"
             )
 
-        # Full prompt
+        # Full Prompt
         prompt = f"""
         You are a hospitalist documentation and triage AI assistant.
 
@@ -80,7 +131,7 @@ if st.button("🚀 Generate All"):
         Clinical Summary:
         {clinical_data}
 
-        Format the output using the following headers:
+        Format output with the following headers:
         ### Generated Note
         ### Status Recommendation
         ### DVT Prophylaxis Recommendation (if applicable)
@@ -88,7 +139,7 @@ if st.button("🚀 Generate All"):
         """
 
         try:
-            with st.spinner("⏳ Generating output..."):
+            with st.spinner("⏳ Generating..."):
                 response = client.chat.completions.create(
                     model="gpt-4",
                     messages=[
@@ -100,7 +151,7 @@ if st.button("🚀 Generate All"):
                 output = response.choices[0].message.content
                 st.success("✅ Output Generated")
 
-                # Parse and display output
+                # Display sections
                 sections = output.split("###")
                 for section in sections:
                     section = section.strip()
@@ -137,7 +188,7 @@ if st.button("🚀 Generate All"):
                     elif section:
                         st.markdown(f"### {section}")
 
-                # Download Button
+                # Download
                 st.download_button(
                     label="📥 Download Note as .txt",
                     data=output,

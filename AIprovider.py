@@ -1,5 +1,5 @@
 import streamlit as st
-import openai
+from openai import OpenAI
 
 st.set_page_config(page_title="HIPAA DocGen Platform", layout="wide")
 
@@ -40,7 +40,7 @@ if st.button("🚀 Generate All"):
     elif not clinical_data or not admitting_diagnosis:
         st.warning("⚠️ Please fill in required clinical fields.")
     else:
-        openai.api_key = api_key
+        client = OpenAI(api_key=api_key)
 
         # Build prompt
         prompt = f"""
@@ -63,7 +63,7 @@ if st.button("🚀 Generate All"):
 
         try:
             with st.spinner("⏳ Generating output..."):
-                response = openai.ChatCompletion.create(
+                response = client.chat.completions.create(
                     model=model_choice,
                     messages=[
                         {"role": "system", "content": "You are a professional hospitalist and documentation expert."},

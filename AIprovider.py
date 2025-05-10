@@ -6,6 +6,7 @@ st.set_page_config(page_title="HIPAA DocGen Platform", layout="wide")
 # Sidebar Configuration
 st.sidebar.title("🔧 Configuration")
 api_key = st.sidebar.text_input("OpenAI API Key", type="password")
+model_choice = st.sidebar.selectbox("OpenAI Model", ["gpt-4", "gpt-3.5-turbo"])
 
 # Page Title
 st.title("🏥 HIPAA-Compliant Documentation Generator")
@@ -66,7 +67,7 @@ if st.button("🚀 Generate All"):
         try:
             with st.spinner("⏳ Generating output..."):
                 response = client.chat.completions.create(
-                    model="gpt-3.5-turbo",
+                    model=model_choice,
                     messages=[
                         {"role": "system", "content": "You are a hospitalist documentation and triage assistant."},
                         {"role": "user", "content": prompt}

@@ -4,7 +4,7 @@ import re
 
 st.set_page_config(page_title="HIPAA DocGen Platform", layout="wide")
 
-# Sidebar Configuration
+# Sidebar
 st.sidebar.title("🔧 Configuration")
 api_key = st.sidebar.text_input("OpenAI API Key", type="password")
 
@@ -34,7 +34,7 @@ include_dvt = st.checkbox("Automatically detect creatinine and recommend prophyl
 st.header("📞 Step 4: Auto-Detect Consults")
 include_consult = st.checkbox("Automatically detect needed consults and generate messages")
 
-# Submit Button
+# Submit
 if st.button("🚀 Generate All"):
     if not api_key:
         st.warning("⚠️ Please enter your OpenAI API Key.")
@@ -43,10 +43,10 @@ if st.button("🚀 Generate All"):
     else:
         client = OpenAI(api_key=api_key)
 
-        # Note-specific prompt instructions
+        # Note-specific formatting
         if note_type == "H&P (SOAP)":
             note_instruction = (
-                "Generate a Hospitalist History and Physical using the following exact structure:\n\n"
+                "Generate a Hospitalist History and Physical using the following structure:\n\n"
                 "Hospitalist History and Physical Exam\n\n"
                 "Chief Complaint:\n\n"
                 "HPI is provided by:\n\n"
@@ -65,7 +65,8 @@ if st.button("🚀 Generate All"):
                 "Height/Length Measured:\n\n"
                 "Lab Results\n\n"
                 "Diagnostic Results\n\n"
-                "ASSESSMENT and PLAN\n\n"
+                "ASSESSMENT and PLAN\n"
+                "- Provide a combined problem-oriented assessment and plan that addresses both acute and chronic medical problems.\n\n"
                 "GI Prophylaxis\n\n"
                 "DVT Prophylaxis\n\n"
                 "Disposition\n\n"
@@ -73,7 +74,7 @@ if st.button("🚀 Generate All"):
             )
         elif note_type == "Progress Note (SOAP)":
             note_instruction = (
-                "Generate a Hospitalist Progress Note using the following exact structure:\n\n"
+                "Generate a Hospitalist Progress Note using the following structure:\n\n"
                 "Hospitalist Progress Note\n\n"
                 "SUBJECTIVE:\n"
                 "Patient was seen and examined. Overnight events reviewed. Discussed with nursing.\n\n"
@@ -84,7 +85,8 @@ if st.button("🚀 Generate All"):
                 "Lab Results\n\n"
                 "I/O\n\n"
                 "Diagnostic Tests\n\n"
-                "ASSESSMENT/PLAN:\n\n"
+                "ASSESSMENT/PLAN:\n"
+                "- Provide a combined problem-oriented assessment and plan that addresses both acute and chronic medical problems.\n\n"
                 "GI Prophylaxis\n\n"
                 "DVT Prophylaxis\n\n"
                 "Disposition\n\n"
@@ -114,11 +116,11 @@ if st.button("🚀 Generate All"):
                 "Plan of care discussed and Reviewed with Dr. _"
             )
 
-        # Full Prompt
+        # Prompt
         prompt = f"""
         You are a hospitalist documentation and triage AI assistant.
 
-        Step 1: From the clinical summary, extract the patient's name (if present) and most likely admitting diagnosis or chief complaint.
+        Step 1: From the clinical summary, extract the patient's name (if mentioned) and most likely admitting diagnosis or chief complaint.
 
         Step 2: {note_instruction}
 
@@ -131,7 +133,7 @@ if st.button("🚀 Generate All"):
         Clinical Summary:
         {clinical_data}
 
-        Format output with the following headers:
+        Format your response with these headers:
         ### Generated Note
         ### Status Recommendation
         ### DVT Prophylaxis Recommendation (if applicable)
@@ -151,7 +153,7 @@ if st.button("🚀 Generate All"):
                 output = response.choices[0].message.content
                 st.success("✅ Output Generated")
 
-                # Display sections
+                # Parse and display output
                 sections = output.split("###")
                 for section in sections:
                     section = section.strip()
@@ -188,7 +190,7 @@ if st.button("🚀 Generate All"):
                     elif section:
                         st.markdown(f"### {section}")
 
-                # Download
+                # Download Button
                 st.download_button(
                     label="📥 Download Note as .txt",
                     data=output,

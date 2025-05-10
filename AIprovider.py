@@ -43,24 +43,30 @@ if st.button("🚀 Generate All"):
     else:
         client = OpenAI(api_key=api_key)
 
-        # Build prompt
+        # Dynamic note instructions
+        if note_type in ["H&P (SOAP)", "Progress Note (SOAP)"]:
+            note_instruction = f"Generate a detailed professional {note_type} using SOAP format. Include a combined problem-oriented Assessment and Plan for each issue."
+        else:
+            note_instruction = "Generate a detailed professional Discharge Summary appropriate for inpatient medical documentation."
+
+        # Full prompt
         prompt = f"""
         You are a hospitalist documentation and triage AI assistant.
 
-        Step 1: From the clinical text below, extract the patient's name (if present) and the most likely admitting diagnosis or chief complaint.
+        Step 1: From the clinical summary, extract the patient's name (if mentioned) and the most likely admitting diagnosis or chief complaint.
 
-        Step 2: Generate a professional **{note_type}** for this patient. Use SOAP format for H&P and Progress Notes.
+        Step 2: {note_instruction}
 
-        Step 3: Determine if the case qualifies for Inpatient or Observation status using InterQual-style logic. Provide a brief justification.
+        Step 3: Evaluate if the patient qualifies for Inpatient or Observation status using InterQual-style logic. Provide a brief justification.
 
         {"Step 4: Extract the patient's most recent creatinine from the clinical summary. If creatinine > 2.0, recommend Heparin. Otherwise, recommend Lovenox." if include_dvt else ""}
 
-        {"Step 5: Identify all relevant specialties that should be consulted. For each, generate a professional consult message that begins with: 'Hello, may I please consult you on...'" if include_consult else ""}
+        {"Step 5: Identify all relevant specialties that should be consulted. For each, generate a consult message starting with: 'Hello, may I please consult you on...'" if include_consult else ""}
 
         Clinical Summary:
         {clinical_data}
 
-        Format your response using the following headers:
+        Use these headers:
         ### Generated Note
         ### Status Recommendation
         ### DVT Prophylaxis Recommendation (if applicable)
@@ -85,7 +91,6 @@ if st.button("🚀 Generate All"):
                 for section in sections:
                     section = section.strip()
 
-                    # 📞 Auto Consult Messages
                     if section.lower().startswith("consult messages") and include_consult:
                         st.markdown("### 📞 Consult Messages (Detected)")
                         consults = section.split("**")
@@ -95,7 +100,6 @@ if st.button("🚀 Generate All"):
                             with st.expander(f"{specialty}"):
                                 st.code(message, language="text")
 
-                    # 🦵 DVT Recommendation (bold Heparin/Lovenox)
                     elif section.lower().startswith("dvt prophylaxis recommendation") and include_dvt:
                         st.markdown("### 🦵 DVT Prophylaxis Recommendation")
                         dvt_bolded = re.sub(
@@ -106,7 +110,6 @@ if st.button("🚀 Generate All"):
                         )
                         st.markdown(dvt_bolded)
 
-                    # 🧠 Status Recommendation (bold Inpatient or Observation)
                     elif section.lower().startswith("status recommendation") and include_status_eval:
                         st.markdown("### 🧠 Status Recommendation")
                         status_bolded = re.sub(
@@ -117,7 +120,6 @@ if st.button("🚀 Generate All"):
                         )
                         st.markdown(status_bolded)
 
-                    # Other Sections
                     elif section:
                         st.markdown(f"### {section}")
 
